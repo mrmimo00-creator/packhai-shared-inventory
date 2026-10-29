@@ -1,1 +1,13 @@
-[]
+[
+  {"date": "2026-10-27", "sku": "Blonde", "qty": 480, "status": "in_transit"},
+  {"date": "2026-10-27", "sku": "Caffè Verona", "qty": 600, "status": "in_transit"},
+  {"date": "2026-10-27", "sku": "Colombia", "qty": 600, "status": "in_transit"},
+  {"date": "2026-10-27", "sku": "Espresso", "qty": 1080, "status": "in_transit"},
+  {"date": "2026-10-27", "sku": "House Blend", "qty": 600, "status": "in_transit"},
+  {"date": "2026-10-27", "sku": "Pike Place", "qty": 360, "status": "in_transit"},
+  {"date": "2026-10-27", "sku": "Breakfast", "qty": 480, "status": "in_transit"},
+  {"date": "2026-10-27", "sku": "Starbucks vanilla", "qty": 480, "status": "in_transit"},
+  {"date": "2026-10-27", "sku": "Italian Style", "qty": 540, "status": "in_transit"},
+  {"date": "2026-10-27", "sku": "Starbucks caramel", "qty": 648, "status": "in_transit"},
+  {"date": "2026-10-27", "sku": "Ristretto", "qty": 648, "status": "in_transit"}
+]
