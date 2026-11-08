@@ -1,0 +1,92 @@
+{
+  "batch_id": "2026-11-07-8000049456954",
+  "status": "in_transit",
+  "shipment_date": "2026-11-07",
+  "carrier": "速通物流",
+  "tracking_number": "8000049456954",
+  "package_count": 1,
+  "total_qty": 3912,
+  "total_amount_rmb": 112008,
+  "items": [
+    {
+      "date": "2026-11-07",
+      "product_name": "Starbucks Caffe Verona",
+      "sku": "Caffè Verona",
+      "qty": 480,
+      "expiry_date": "2027-07-01",
+      "unit_price_rmb": 28.5,
+      "amount_rmb": 13680,
+      "status": "in_transit"
+    },
+    {
+      "date": "2026-11-07",
+      "product_name": "Starbucks Espresso Roast",
+      "sku": "Espresso",
+      "qty": 1080,
+      "expiry_date": "2027-10-01",
+      "unit_price_rmb": 28.5,
+      "amount_rmb": 30780,
+      "status": "in_transit"
+    },
+    {
+      "date": "2026-11-07",
+      "product_name": "Starbucks House Blend Lungo",
+      "sku": "House Blend",
+      "qty": 600,
+      "expiry_date": "2027-10-01",
+      "unit_price_rmb": 28.5,
+      "amount_rmb": 17100,
+      "status": "in_transit"
+    },
+    {
+      "date": "2026-11-07",
+      "product_name": "Starbucks Pike Place Roast Lungo",
+      "sku": "Pike Place",
+      "qty": 240,
+      "expiry_date": "2027-10-01",
+      "unit_price_rmb": 28.5,
+      "amount_rmb": 6840,
+      "status": "in_transit"
+    },
+    {
+      "date": "2026-11-07",
+      "product_name": "Starbucks Coffee Guatemala",
+      "sku": "Guatemala",
+      "qty": 240,
+      "expiry_date": "2027-05-01",
+      "unit_price_rmb": 28,
+      "amount_rmb": 6720,
+      "status": "in_transit"
+    },
+    {
+      "date": "2026-11-07",
+      "product_name": "Starbucks Coffee Italian Style",
+      "sku": "Italian Style",
+      "qty": 432,
+      "expiry_date": "2027-10-01",
+      "unit_price_rmb": 29,
+      "amount_rmb": 12528,
+      "status": "in_transit"
+    },
+    {
+      "date": "2026-11-07",
+      "product_name": "Starbucks Coffee Vanilla",
+      "sku": "Starbucks vanilla",
+      "qty": 192,
+      "expiry_date": "2027-10-01",
+      "unit_price_rmb": 29,
+      "amount_rmb": 5568,
+      "status": "in_transit"
+    },
+    {
+      "date": "2026-11-07",
+      "product_name": "Starbucks Coffee Caramel",
+      "sku": "Starbucks caramel",
+      "qty": 648,
+      "expiry_date": "2027-10-01",
+      "unit_price_rmb": 29,
+      "amount_rmb": 18792,
+      "status": "in_transit"
+    }
+  ]
+}
