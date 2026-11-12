@@ -9,5 +9,16 @@
   {"date": "2026-10-27", "sku": "Starbucks vanilla", "qty": 480, "status": "in_transit"},
   {"date": "2026-10-27", "sku": "Italian Style", "qty": 540, "status": "in_transit"},
   {"date": "2026-10-27", "sku": "Starbucks caramel", "qty": 648, "status": "in_transit"},
-  {"date": "2026-10-27", "sku": "Ristretto", "qty": 648, "status": "in_transit"}
+  {"date": "2026-10-27", "sku": "Ristretto", "qty": 648, "status": "in_transit"},
+  {"date": "2026-11-12", "sku": "Blonde", "qty": 480, "status": "arrived_packhai"},
+  {"date": "2026-11-12", "sku": "Caffè Verona", "qty": 600, "status": "arrived_packhai"},
+  {"date": "2026-11-12", "sku": "Colombia", "qty": 600, "status": "arrived_packhai"},
+  {"date": "2026-11-12", "sku": "Espresso", "qty": 1080, "status": "arrived_packhai"},
+  {"date": "2026-11-12", "sku": "House Blend", "qty": 600, "status": "arrived_packhai"},
+  {"date": "2026-11-12", "sku": "Pike Place", "qty": 360, "status": "arrived_packhai"},
+  {"date": "2026-11-12", "sku": "Breakfast", "qty": 480, "status": "arrived_packhai"},
+  {"date": "2026-11-12", "sku": "Starbucks vanilla", "qty": 480, "status": "arrived_packhai"},
+  {"date": "2026-11-12", "sku": "Italian Style", "qty": 540, "status": "arrived_packhai"},
+  {"date": "2026-11-12", "sku": "Starbucks caramel", "qty": 648, "status": "arrived_packhai"},
+  {"date": "2026-11-12", "sku": "Ristretto", "qty": 648, "status": "arrived_packhai"}
 ]
