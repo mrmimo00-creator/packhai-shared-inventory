@@ -46,12 +46,16 @@ def build(root=ROOT):
             sku, qty = item.get("sku"), item.get("qty")
             if not isinstance(sku, str) or not sku.strip() or not positive(qty):
                 raise ValueError(f"{batch_id}: invalid sku or qty")
-            if "status" in item and item["status"] != status:
+            item_status = item.get("status", status)
+            # A batch awaiting receipt may contain independently received SKUs.
+            if (not isinstance(item_status, str) or item_status not in STATUSES
+                    or (item_status != status
+                        and not (status == "arrived_packhai" and item_status == "received"))):
                 raise ValueError(f"{batch_id}: contradictory item status")
             total += qty
-            if status != "received":
+            if item_status != "received":
                 records.append(dict(date=shipment_date, sku=sku, qty=qty,
-                                    status=status, batch_id=batch_id))
+                                    status=item_status, batch_id=batch_id))
         if not positive(batch.get("total_qty")) or batch["total_qty"] != total:
             raise ValueError(f"{batch_id}: total_qty differs from items sum")
     # All batches must pass before the existing output can be replaced.
