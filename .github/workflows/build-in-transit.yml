@@ -1,0 +1,44 @@
+name: Build shared in-transit inventory
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'in_transit_batches/**'
+      - 'scripts/build_in_transit.py'
+      - 'tests/**'
+      - '.github/workflows/build-in-transit.yml'
+      - 'in_transit.json'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: build-in-transit
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -v
+      - name: Rebuild and publish derived inventory
+        run: |
+          # Rebuild on current main, including any batch changes made during this job.
+          for attempt in 1 2 3; do
+            git pull --ff-only origin main
+            python scripts/build_in_transit.py
+            if git diff --quiet -- in_transit.json; then exit 0; fi
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add in_transit.json
+            git commit -m "chore: regenerate in-transit inventory [skip ci]"
+            if git push origin HEAD:main; then exit 0; fi
+            # Keep the failed commit recoverable while rebuilding against newer batches.
+            git fetch origin main
+            git checkout -B main origin/main
+          done
+          exit 1
