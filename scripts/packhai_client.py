@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+import json
+from time import monotonic
 from datetime import date, datetime, time
 from typing import Any, Iterable
 
@@ -31,6 +33,67 @@ WAREHOUSE_IDS = [
     8812,
     8824,
 ]
+
+
+MAX_READ_PAGES = 100
+READ_TIMEOUT_SECONDS = 300
+
+
+def _reject_api_error(payload):
+    if not isinstance(payload, dict):
+        return
+    if any(payload.get(key) in (False, "false", "False", "0") for key in ("success", "isSuccess", "state")) or payload.get("isError") in (True, "true", "True", "1"):
+        raise RuntimeError("Packhai 返回业务错误，本轮未完成")
+    try:
+        code = int(payload.get("code", 0))
+    except (TypeError, ValueError):
+        code = 0
+    if 400 <= code < 600 or code < 0:
+        raise RuntimeError("Packhai 返回业务错误，本轮未完成")
+
+
+def _reported_count(payload, *keys):
+    if not isinstance(payload, dict):
+        return None
+    for key in keys:
+        value = payload.get(key)
+        if value is not None:
+            try:
+                result = int(value)
+            except (TypeError, ValueError, OverflowError):
+                raise RuntimeError("Packhai 分页总数无效，本轮未完成") from None
+            if result < 0:
+                raise RuntimeError("Packhai 分页总数无效，本轮未完成")
+            return result
+    return None
+
+
+def _stock_quantity(item):
+    value = item.get("quantityAvailable")
+    if value is None or value == "" or isinstance(value, bool):
+        raise RuntimeError("Packhai 主仓SKU缺少有效库存数量，本轮未完成")
+    try:
+        return int(value)
+    except (TypeError, ValueError, OverflowError):
+        raise RuntimeError("Packhai 主仓SKU库存数量无效，本轮未完成") from None
+
+
+def _check_page(page, seen, skip, total):
+    if not isinstance(page, list) or any(not isinstance(item, dict) for item in page):
+        raise RuntimeError("Packhai 分页结构异常，本轮未完成")
+    if not page:
+        if total is not None and skip < total:
+            raise RuntimeError("Packhai 分页未取完整，本轮未完成")
+        return
+    fingerprint = json.dumps(page, sort_keys=True, ensure_ascii=False, default=str)
+    if fingerprint in seen:
+        raise RuntimeError("Packhai 重复返回同一页，本轮未完成")
+    seen.add(fingerprint)
+
+
+def _check_read_budget(pages, deadline):
+    if pages >= MAX_READ_PAGES or monotonic() >= deadline:
+        raise RuntimeError("Packhai 分页读取超出本轮上限，本轮未完成")
 
 
 class PackhaiClient:
@@ -71,7 +134,11 @@ class PackhaiClient:
         skip = 0
         total: int | None = None
 
-        while total is None or skip < total:
+        pages = 0
+        seen = set()
+        deadline = monotonic() + READ_TIMEOUT_SECONDS
+        while True:
+            _check_read_budget(pages, deadline)
             payload = self._post_stock(
                 {
                     "shopId": self.shop_id,
@@ -96,21 +163,24 @@ class PackhaiClient:
                     "warehouseIDList": WAREHOUSE_IDS,
                 }
             )
-            if "resultData" not in payload:
-                raise RuntimeError(f"Packhai 返回格式异常：{payload}")
-
-            page = payload.get("resultData", [])
-            total = int(payload.get("resultCount", len(page)))
+            _reject_api_error(payload)
+            if not isinstance(payload, dict) or "resultData" not in payload:
+                raise RuntimeError("Packhai 库存响应结构异常，本轮未完成")
+            page = payload["resultData"]
+            reported = _reported_count(payload, "resultCount")
+            if reported is not None:
+                total = max(total or 0, reported)
+            _check_page(page, seen, skip, total)
             for item in page:
                 if not item.get("isPackhaiWarehouse"):
                     continue
                 sku = str(item.get("sku") or "").strip()
                 if sku:
-                    inventory[sku] = int(item.get("quantityAvailable") or 0)
-
-            if not page:
-                break
+                    inventory[sku] = _stock_quantity(item)
             skip += len(page)
+            pages += 1
+            if (total is not None and skip >= total) or (total is None and len(page) < STOCK_PAGE_SIZE):
+                break
 
         if not inventory:
             raise RuntimeError("Packhai 没有返回任何有效的主仓 SKU")
@@ -124,8 +194,13 @@ class PackhaiClient:
         skip = 0
         take = 200
         orders: list[dict[str, Any]] = []
+        total = None
+        pages = 0
+        seen = set()
+        deadline = monotonic() + READ_TIMEOUT_SECONDS
 
         while True:
+            _check_read_budget(pages, deadline)
             payload = self._post(
                 "shop-get-order-list",
                 {
@@ -153,22 +228,17 @@ class PackhaiClient:
                 },
             )
             page = _pick_list(payload, "orderList", "items", "data")
+            reported = _reported_count(payload, "resultCount", "totalRows", "searchResultCount")
+            if reported is not None:
+                total = max(total or 0, reported)
+            _check_page(page, seen, skip, total)
             orders.extend(page)
-            total = int(
-                _pick(
-                    payload,
-                    "resultCount",
-                    "totalRows",
-                    "searchResultCount",
-                    default=len(orders),
-                )
-                or len(orders)
-            )
-            has_more = bool(page) and len(orders) < total and len(page) == take
+            pages += 1
+            has_more = bool(page) and (len(orders) < total if total is not None else len(page) >= take)
             if diagnostics:
                 print(
                     f"[Packhai] date={shipped_day.isoformat()} skip={skip} take={take} "
-                    f"returned={len(page)} total={total} has_more={str(has_more).lower()}"
+                    f"returned={len(page)} total={total if total is not None else len(orders)} has_more={str(has_more).lower()}"
                 )
             if not has_more:
                 break
@@ -183,8 +253,13 @@ class PackhaiClient:
         self, days: Iterable[date], *, diagnostics: bool = False
     ) -> list[dict[str, Any]]:
         lines: list[dict[str, Any]] = []
+        deadline = monotonic() + 20 * 60
         for shipped_day in days:
+            if monotonic() >= deadline:
+                raise RuntimeError("Packhai 出库读取超出本轮上限，本轮未完成")
             for order in self.fetch_orders_for_day(shipped_day, diagnostics=diagnostics):
+                if monotonic() >= deadline:
+                    raise RuntimeError("Packhai 出库读取超出本轮上限，本轮未完成")
                 order_id = _pick(order, "id", "orderID", "orderMasterID", "orderMasterId")
                 if order_id is None:
                     continue
@@ -246,16 +321,25 @@ def _pick(data: Any, *keys: str, default: Any = None) -> Any:
 
 
 def _pick_list(data: Any, *keys: str) -> list[dict[str, Any]]:
-    if isinstance(data, list):
-        return [item for item in data if isinstance(item, dict)]
-    if not isinstance(data, dict):
-        return []
-    for key in keys:
-        value = data.get(key)
+    def find(value):
+        _reject_api_error(value)
         if isinstance(value, list):
-            return [item for item in value if isinstance(item, dict)]
-        if isinstance(value, dict):
-            nested = _pick_list(value, *keys)
-            if nested:
-                return nested
-    return []
+            if any(not isinstance(item, dict) for item in value):
+                raise RuntimeError("Packhai 明细结构异常，本轮未完成")
+            return value
+        if not isinstance(value, dict):
+            return None
+        for key in keys:
+            candidate = value.get(key)
+            if isinstance(candidate, (list, dict)):
+                found = find(candidate)
+                if found is not None:
+                    return found
+            if key in value and candidate is None and _reported_count(value, "resultCount", "totalRows", "searchResultCount") == 0:
+                return []
+        return None
+
+    result = find(data)
+    if result is None:
+        raise RuntimeError("Packhai 未返回已支持的订单/明细结构，本轮未完成")
+    return result
